@@ -2,6 +2,8 @@
 
 ![today](https://github.com/Kasheeram/AppStore-Clone/assets/19978447/b7a3998b-a277-4394-aaa9-05fdc1e3d6dc)
 
+<img src="https://github.com/Kasheeram/AppStore-Clone/assets/19978447/b7a3998b-a277-4394-aaa9-05fdc1e3d6dc" width="200" />
+
 ![app tab](https://github.com/Kasheeram/AppStore-Clone/assets/19978447/d189f2d2-562b-4f75-ae8d-a00ac3738a81)
 
 ![search](https://github.com/Kasheeram/AppStore-Clone/assets/19978447/4581157e-e673-46fa-b88a-182b596caa80)
