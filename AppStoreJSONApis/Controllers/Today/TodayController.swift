@@ -7,7 +7,7 @@
 
 import UIKit
 
-class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
+class TodayController: BaseListController, UICollectionViewDelegateFlowLayout, UIGestureRecognizerDelegate {
     
 //    fileprivate let cellId = "cellId"
 //    fileprivate let multipleAppCellId = "multipleAppCellId"
@@ -34,10 +34,14 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
         return aiv
     }()
     
-    
+    let blurVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        view.addSubview(blurVisualEffectView)
+        blurVisualEffectView.fillSuperview()
+        blurVisualEffectView.alpha = 0
         
         view.addSubview(activityIndicatorView)
         activityIndicatorView.centerInSuperview()
@@ -135,10 +139,54 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
         let appFullscreenController = AppFullscreenController()
         appFullscreenController.todayItem = items[indexPath.item]
         appFullscreenController.dismissHandler = {
-            self.handleRemoveRedView()
+            self.handleFullscreenDismissal()
         }
         appFullscreenController.view.layer.cornerRadius = 16
         self.appFullscreenController = appFullscreenController
+        
+        // #1 setup our pan gesture
+        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleDrag))
+        gesture.delegate = self
+        appFullscreenController.view.addGestureRecognizer(gesture)
+        // #2 add a blue effect view
+        
+        // #3 not to interfere with our UITableView scrolling
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+    
+    var appFullscreenBeginOffset: CGFloat = 0
+    
+    @objc fileprivate func handleDrag(gesture: UIPanGestureRecognizer) {
+        
+        if gesture.state == .began {
+            appFullscreenBeginOffset = appFullscreenController.tableView.contentOffset.y
+        }
+        
+        if appFullscreenController.tableView.contentOffset.y > 0 {
+            return
+        }
+        
+        let translationY = gesture.translation(in: appFullscreenController.view).y
+        
+        if gesture.state == .changed {
+            if translationY > 0 {
+                let trueOffset = translationY - appFullscreenBeginOffset
+                var scale = 1 - trueOffset / 1000
+                scale = min(1, scale)
+                scale = max(0.5, scale)
+                let transform: CGAffineTransform = .init(scaleX: scale, y: scale)
+                self.appFullscreenController.view.transform = transform
+                
+            }
+        } else if gesture.state == .ended {
+            if translationY > 0 {
+                handleFullscreenDismissal()
+            }
+            
+        }
     }
     
     fileprivate func setupStartingCellFrame(_ indexPath: IndexPath) {
@@ -151,7 +199,7 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
     
     fileprivate func setupAppFullscreenStartingPosition(_ indexPath: IndexPath) {
         let fullscreenView = appFullscreenController.view!
-        fullscreenView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleRemoveRedView)))
+//        fullscreenView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleFullscreenDismissal)))
         view.addSubview(fullscreenView)
 
         addChild(appFullscreenController)
@@ -176,6 +224,8 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
     fileprivate func beginAnimationAppFullscreen() {
         UIView.animate(withDuration: 0.7, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.7, options: .curveEaseOut, animations: {
 
+            self.blurVisualEffectView.alpha = 1
+            
             self.anchoredConstraints?.top?.constant = 0
             self.anchoredConstraints?.leading?.constant = 0
             self.anchoredConstraints?.width?.constant = self.view.frame.width
@@ -205,9 +255,11 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
     
     var startingFrame: CGRect?
     
-    @objc func handleRemoveRedView() {
+    @objc func handleFullscreenDismissal() {
         UIView.animate(withDuration: 0.7, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.7, options: .curveEaseOut, animations: {
             
+            self.blurVisualEffectView.alpha = 0
+            self.appFullscreenController.view.transform = .identity
 //            self.appFullscreenController.tableView.contentOffset = .zero
             
             self.appFullscreenController.tableView.scrollToRow(at: [0, 0], at: .top, animated: true)
@@ -226,6 +278,7 @@ class TodayController: BaseListController, UICollectionViewDelegateFlowLayout {
             }
             
             guard let cell = self.appFullscreenController.tableView.cellForRow(at: [0, 0]) as? AppFullscreenHeaderCell else { return }
+            self.appFullscreenController.closeButton.alpha = 0
             cell.todayCell.topConstraint.constant = 24
             cell.layoutIfNeeded()
             
